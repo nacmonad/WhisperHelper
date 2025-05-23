@@ -13,8 +13,7 @@ LOG_FILE="/tmp/whisper_helper.log"
 RECORDING_PID_FILE="/tmp/whisper_helper_recording_pid"
 
 # Enable debug logging
-DEBUG_MODE=true
-
+DEBUG_MODE=false
 # Debug logging function
 log_debug() {
   if [ "$DEBUG_MODE" = true ]; then
@@ -281,7 +280,10 @@ get_transcription() {
   local transcription=$(echo "$response" | grep -o '"text":"[^"]*"' | cut -d'"' -f4)
   
   if [ -n "$transcription" ]; then
-    log_debug "Transcription extracted: $transcription"
+    # Trim trailing newlines from the transcription
+    transcription=$(echo "$transcription" | sed 's/\\n$//g' | tr -d '\n')
+    log_debug "Transcription after trimming: $transcription"
+    
     # Write only the transcription to the transcript file
     echo "$transcription" > "$TEMP_TRANSCRIPT_FILE"
   else
