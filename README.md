@@ -8,42 +8,60 @@ WhisperHelper allows you to convert speech to text anywhere in your Linux system
 
 ## Features
 
-- System-wide hotkey activation
+- System-wide hotkey activation (Alt+r for 5-second recording)
 - Audio recording from system microphone using SoX
 - Integration with remote Whisper API (compatible with OpenAI's Whisper model)
 - Automatic text insertion into the active application
 - Clipboard fallback when no text field is focused
 
-## Implementation Steps
+## Usage
 
-1. **Input Detection**
-   - Implement global hotkey detection using a library like `xlib` or `keyboard`
-   - Configure start/stop recording triggers
+1. Start the WhisperHelper service by running `./start_whisper_helper.sh`
+2. Press `Alt+r` to start recording for 5 seconds
+3. After 5 seconds, the recording will stop automatically and be sent for transcription
+4. The transcribed text will be inserted at your cursor position
 
-2. **Audio Recording**
-   - Capture audio from the default microphone using SoX (`rec` command)
-   - Handle recording start/stop and audio format conversion via SoX
-
-3. **API Integration**
-   - Send recorded audio to the remote Whisper API (http://10.0.0.60:8080/inference)
-   - Process the API response to extract transcribed text
-
-4. **Text Insertion**
-   - Determine the currently focused application/text field using X11 or Wayland protocols
-   - Simulate keyboard typing to insert the text using libraries like `xdotool` or `ydotool`
-   - Implement clipboard fallback using a library like `xclip` or `wl-clipboard`
-
-5. **Configuration**
-   - Create config file for API endpoint, hotkeys, and other preferences
-   - Implement settings UI (optional)
-
-6. **System Integration**
-   - Create startup service or autostart entry for persistent availability
-   - Ensure proper permissions for audio and input device access
+To stop the service, run `./stop_whisper_helper.sh`
 
 ## Requirements
 
-- Linux system with X11 or Wayland
+- Linux system with X11
 - SoX (Sound eXchange) for audio recording
-- Bash or Python for script orchestration
-- Access to a running Whisper API server 
+- curl for API communication
+- xdotool for text insertion
+- xclip for clipboard operations
+- xbindkeys for hotkey binding
+
+Install dependencies on Ubuntu/Debian:
+```bash
+sudo apt-get install sox curl xdotool xclip xbindkeys
+```
+
+## Configuration
+
+You can modify the `.xbindkeysrc` file to customize hotkeys or add additional recording durations.
+
+The main API endpoint and other settings can be changed in the `whisper_helper.sh` script.
+
+## Implementation Details
+
+1. **Input Detection**
+   - Global hotkey detection using xbindkeys
+   - Configured to use Alt+r for 5-second recording and transcription
+
+2. **Audio Recording**
+   - Captures audio from the default microphone using SoX
+   - Handles recording start/stop via script commands
+
+3. **API Integration**
+   - Sends recorded audio to the remote Whisper API (http://10.0.0.60:8080/inference)
+   - Processes the API response to extract transcribed text
+
+4. **Text Insertion**
+   - Uses xdotool to type the transcribed text into the active window
+   - Falls back to clipboard (xclip) if text insertion fails
+
+## System Integration
+
+- Create a startup entry to run `start_whisper_helper.sh` on login for persistent availability
+- The included desktop file can be used for autostart 

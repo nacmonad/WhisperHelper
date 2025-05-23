@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=WhisperHelper
+Comment=Speech-to-text utility using Whisper API
+Exec=/home/nacmonad/Dev/WhisperHelper/start_whisper_helper.sh
+Terminal=false
+X-GNOME-Autostart-enabled=true
+Hidden=false 

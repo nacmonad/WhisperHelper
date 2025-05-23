@@ -1,0 +1,13 @@
+# WhisperHelper Configuration
+# Alt+r records for 5 seconds and automatically transcribes
+
+# Alt+r to record for 5 seconds
+"bash /home/nacmonad/Dev/WhisperHelper/record_5_seconds.sh"
+    m:0x8 + c:27
+    Alt + r
+
+# You can also add additional hotkeys below if needed
+# For example, to extend recording duration
+# "bash /home/nacmonad/Dev/WhisperHelper/whisper_helper.sh start; sleep 10.5; bash /home/nacmonad/Dev/WhisperHelper/whisper_helper.sh stop"
+#     m:0x9 + c:27
+#     Alt+Shift + r 
