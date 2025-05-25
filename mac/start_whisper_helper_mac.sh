@@ -30,22 +30,22 @@ mkdir -p "$HAMMERSPOON_CONFIG_DIR"
 # Create or update Hammerspoon configuration
 cat > "$HAMMERSPOON_INIT_FILE" << EOL
 -- WhisperHelper configuration for Hammerspoon
--- Alt+r records for 5 seconds and automatically transcribes
--- Alt+Shift+r for press-to-hold recording (release to transcribe)
+-- Cmd+Option+r records for 5 seconds and automatically transcribes
+-- Cmd+Option+Shift+r for press-to-hold recording (release to transcribe)
 
 local whisperHelperDir = "$SCRIPT_DIR"
 
 -- Key bindings
-local altR = {{"alt"}, "r"}
-local altShiftR = {{"alt", "shift"}, "r"}
+local cmdOptionR = {{"cmd", "option"}, "r"}
+local cmdOptionShiftR = {{"cmd", "option", "shift"}, "r"}
 
--- Alt+r to record for 5 seconds
-hs.hotkey.bind(altR[1], altR[2], function()
+-- Cmd+Option+r to record for 5 seconds
+hs.hotkey.bind(cmdOptionR[1], cmdOptionR[2], function()
     hs.execute(whisperHelperDir .. "/record_5_seconds_mac.sh")
 end)
 
--- Alt+Shift+r press event (start recording)
-local recordingHotkey = hs.hotkey.new(altShiftR[1], altShiftR[2], function()
+-- Cmd+Option+Shift+r press event (start recording)
+local recordingHotkey = hs.hotkey.new(cmdOptionShiftR[1], cmdOptionShiftR[2], function()
     -- Check if recording is not in progress
     if not hs.fs.attributes("/tmp/whisper_helper.lock") then
         hs.execute(whisperHelperDir .. "/record_press_hold_mac.sh")
@@ -58,15 +58,15 @@ end)
 recordingHotkey:enable()
 
 -- Show notification that WhisperHelper is running
-hs.notify.new({title="WhisperHelper", informativeText="WhisperHelper is now running. Press Alt+r for 5-second recording or Alt+Shift+r (press and hold) for variable-length recording."}):send()
+hs.notify.new({title="WhisperHelper", informativeText="WhisperHelper is now running. Press Cmd+Option+r for 5-second recording or Cmd+Option+Shift+r (press and hold) for variable-length recording."}):send()
 EOL
 
 # Reload Hammerspoon configuration
 osascript -e 'tell application "Hammerspoon" to reload config'
 
 # Notify user that WhisperHelper is running
-osascript -e 'display notification "WhisperHelper is now running. Press Alt+r for 5-second recording or Alt+Shift+r (press and hold) for variable-length recording." with title "WhisperHelper"'
+osascript -e 'display notification "WhisperHelper is now running. Press Cmd+Option+r for 5-second recording or Cmd+Option+Shift+r (press and hold) for variable-length recording." with title "WhisperHelper"'
 
 echo "WhisperHelper is now running."
-echo "Press Alt+r for 5-second recording"
-echo "Press and hold Alt+Shift+r for variable-length recording (release to transcribe)" 
+echo "Press Cmd+Option+r for 5-second recording"
+echo "Press and hold Cmd+Option+Shift+r for variable-length recording (release to transcribe)" 

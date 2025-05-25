@@ -41,9 +41,9 @@ This will configure Hammerspoon with the appropriate hotkeys and start the servi
 
 WhisperHelper provides two recording modes:
 
-1. **5-Second Recording**: Press `Alt+r` to start a recording that will automatically stop after 5 seconds and be transcribed.
+1. **5-Second Recording**: Press `Cmd+Option+r` to start a recording that will automatically stop after 5 seconds and be transcribed.
 
-2. **Press-and-Hold Recording**: Press and hold `Alt+Shift+r` to start recording, then release the key combination to stop recording and trigger transcription.
+2. **Press-and-Hold Recording**: Press and hold `Cmd+Option+Shift+r` to start recording, then release the key combination to stop recording and trigger transcription.
 
 After transcription, the text is automatically copied to your clipboard, so you can paste it anywhere with `Cmd+v`.
 
@@ -63,8 +63,8 @@ The WhisperHelper scripts use the following configuration:
   - You can edit `whisper_helper_mac.sh` to change this URL.
 
 - Hotkeys: 
-  - `Alt+r` for 5-second recording
-  - `Alt+Shift+r` for press-and-hold recording
+  - `Cmd+Option+r` for 5-second recording
+  - `Cmd+Option+Shift+r` for press-and-hold recording
   - These can be modified in the Hammerspoon configuration file at `~/.hammerspoon/init.lua`
 
 ## Troubleshooting
@@ -88,4 +88,5 @@ The WhisperHelper scripts use the following configuration:
 
 - The transcribed text is copied to the clipboard for easy pasting.
 - You can set `TYPE_TEXT=true` in your environment to have WhisperHelper type the text using AppleScript instead of copying to clipboard.
-- All temporary files are stored in `/tmp/` and are cleaned up after each recording. 
+- All temporary files are stored in `/tmp/` and are cleaned up after each recording.
+- For macOS Sequoia (15+), we use Cmd+Option combination instead of just Option key due to system restrictions on single-modifier global hotkeys. 
