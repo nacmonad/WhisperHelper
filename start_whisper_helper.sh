@@ -10,6 +10,8 @@ pkill xbindkeys || true
 rm -f /tmp/whisper_helper_recording.wav
 rm -f /tmp/whisper_helper_stop_recording
 rm -f /tmp/whisper_helper.lock
+rm -f /tmp/whisper_helper_recording_pid
+rm -f /tmp/whisper_helper_transcript.txt
 
 # Copy the configuration file to the home directory
 cp "$(dirname "$0")/.xbindkeysrc" "$HOME/.xbindkeysrc"
@@ -18,7 +20,8 @@ cp "$(dirname "$0")/.xbindkeysrc" "$HOME/.xbindkeysrc"
 xbindkeys
 
 # Notify user that WhisperHelper is running
-notify-send "WhisperHelper" "WhisperHelper is now running. Press Alt+r to record and automatically transcribe in 5 seconds." -t 5000
+notify-send "WhisperHelper" "WhisperHelper is now running. Press Alt+r for 5-second recording or Alt+Shift+r (press and hold) for variable-length recording." -t 5000
 
 echo "WhisperHelper is now running."
-echo "Press Alt+r to record for 5 seconds and automatically transcribe." 
+echo "Press Alt+r for 5-second recording"
+echo "Press and hold Alt+Shift+r for variable-length recording (release to transcribe)" 

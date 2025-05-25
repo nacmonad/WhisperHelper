@@ -8,7 +8,9 @@ WhisperHelper allows you to convert speech to text anywhere in your Linux system
 
 ## Features
 
-- System-wide hotkey activation (Alt+r for 5-second recording)
+- System-wide hotkey activation with two recording modes:
+  - Alt+r for 5-second recording
+  - Alt+Shift+r for press-and-hold recording (release to transcribe)
 - Audio recording from system microphone using SoX
 - Integration with remote Whisper API (compatible with OpenAI's Whisper model)
 - Automatic text insertion into the active application
@@ -17,8 +19,10 @@ WhisperHelper allows you to convert speech to text anywhere in your Linux system
 ## Usage
 
 1. Start the WhisperHelper service by running `./start_whisper_helper.sh`
-2. Press `Alt+r` to start recording for 5 seconds
-3. After 5 seconds, the recording will stop automatically and be sent for transcription
+2. Choose your recording method:
+   - Press `Alt+r` to start recording for 5 seconds
+   - Press and hold `Alt+Shift+r` while speaking, then release when done
+3. The recording will be sent for transcription
 4. The transcribed text will be inserted at your cursor position
 
 To stop the service, run `./stop_whisper_helper.sh`
@@ -47,7 +51,7 @@ The main API endpoint and other settings can be changed in the `whisper_helper.s
 
 1. **Input Detection**
    - Global hotkey detection using xbindkeys
-   - Configured to use Alt+r for 5-second recording and transcription
+   - Two hotkey modes: timed recording and press-and-hold
 
 2. **Audio Recording**
    - Captures audio from the default microphone using SoX

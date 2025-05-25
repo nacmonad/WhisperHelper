@@ -5,6 +5,7 @@
 
 # Configuration variables (can be moved to a separate config file later)
 WHISPER_API_URL="http://10.0.0.60:8080/inference"
+WHISPER_API_TIMEOUT=10  # Reduced timeout from 30 to 10 seconds
 TEMP_AUDIO_FILE="/tmp/whisper_helper_recording.wav"
 TEMP_TRANSCRIPT_FILE="/tmp/whisper_helper_transcript.txt"
 STOP_RECORDING_FLAG="/tmp/whisper_helper_stop_recording"
@@ -13,7 +14,7 @@ LOG_FILE="/tmp/whisper_helper.log"
 RECORDING_PID_FILE="/tmp/whisper_helper_recording_pid"
 
 # Enable debug logging
-DEBUG_MODE=false
+DEBUG_MODE=true
 # Debug logging function
 log_debug() {
   if [ "$DEBUG_MODE" = true ]; then
@@ -169,17 +170,34 @@ stop_recording() {
       
       # Process the recording - this will save transcription to the transcript file
       log_debug "Getting transcription..."
+      local start_time=$(date +%s)
       get_transcription >/dev/null
+      local transcription_status=$?
+      local end_time=$(date +%s)
+      local duration=$((end_time - start_time))
+      log_debug "Transcription request took $duration seconds with status: $transcription_status"
       
       # Check if transcription was successful by looking for transcript file
-      if [ -f "$TEMP_TRANSCRIPT_FILE" ] && [ -s "$TEMP_TRANSCRIPT_FILE" ]; then
-        log_debug "Transcription saved to file, inserting text"
-        # No need to pass the transcription - insert_text will read from file
-        insert_text
-        notify-send "WhisperHelper" "Transcription inserted" -t 1500
+      if [ $transcription_status -eq 0 ] && [ -f "$TEMP_TRANSCRIPT_FILE" ]; then
+        # Check if transcription is empty
+        if [ ! -s "$TEMP_TRANSCRIPT_FILE" ]; then
+          log_debug "Transcription file exists but is empty (no speech detected)"
+          notify-send "WhisperHelper" "No speech detected" -t 1500
+        else
+          log_debug "Transcription saved to file, inserting text"
+          # No need to pass the transcription - insert_text will read from file
+          insert_text
+          notify-send "WhisperHelper" "Transcription inserted" -t 1500
+        fi
       else
-        log_debug "Transcription failed or returned empty"
-        notify-send "WhisperHelper" "Transcription failed" -t 1500
+        # If transcription failed, check specific errors
+        if [ $duration -ge $WHISPER_API_TIMEOUT ]; then
+          log_debug "Transcription request timed out after $duration seconds"
+          notify-send "WhisperHelper" "Transcription timed out - server may be overloaded" -t 2500
+        else
+          log_debug "Transcription failed or returned empty"
+          notify-send "WhisperHelper" "Transcription failed - check logs" -t 1500
+        fi
       fi
     else
       log_debug "Audio file exists but is empty"
@@ -261,35 +279,144 @@ get_transcription() {
     return 1
   fi
   
+  # Check audio file size
+  local file_size=$(du -k "$TEMP_AUDIO_FILE" | cut -f1)
+  log_debug "Audio file size: ${file_size}KB"
+  echo "Audio file size: ${file_size}KB" >&2
+  
+  if [ "$file_size" -eq 0 ]; then
+    log_debug "Error: Audio file is empty."
+    echo "Error: Audio file is empty." >&2
+    return 1
+  fi
+  
   # Clear any existing transcript file
   rm -f "$TEMP_TRANSCRIPT_FILE"
   
-  # Send the file to the Whisper API using curl
-  # The format matches the OpenAI Whisper API format
+  # Test connectivity to API server first
+  echo "Testing connection to API server..." >&2
+  local api_host=$(echo "$WHISPER_API_URL" | sed -E 's#^https?://##' | sed -E 's#/.*$##' | sed -E 's#:[0-9]+$##')
+  log_debug "API host: $api_host"
+  
+  if ! ping -c 1 -W 2 "$api_host" > /dev/null 2>&1; then
+    log_debug "Error: Cannot reach API server. Network connectivity issue."
+    echo "Error: Cannot reach API server. Network connectivity issue." >&2
+    return 1
+  fi
+  
+  # Try a simple HTTP connection test before sending the file
+  local api_port=$(echo "$WHISPER_API_URL" | grep -oE ':[0-9]+' | cut -d':' -f2)
+  if [ -z "$api_port" ]; then
+    api_port="80"
+  fi
+  
+  log_debug "Testing HTTP connection to $api_host:$api_port"
+  if ! timeout 3 bash -c "</dev/tcp/$api_host/$api_port" 2>/dev/null; then
+    log_debug "Error: Cannot connect to API server port. Server may be down."
+    echo "Error: Cannot connect to API server port. Server may be down." >&2
+    return 1
+  fi
+  
+  # Send the file to the Whisper API using curl with better error handling
   log_debug "Sending curl request to API"
-  local response=$(curl -v -s -X POST \
+  echo "Sending request with curl, this may take a moment..." >&2
+  
+  # Temporary file for curl output
+  local curl_output="/tmp/whisper_helper_curl_output.txt"
+  local curl_headers="/tmp/whisper_helper_curl_headers.txt"
+  local curl_status=0
+  
+  # Record start time
+  local start_time=$(date +%s)
+  log_debug "Starting curl request at $(date)"
+  
+  # Use curl with timeout and verbose output
+  curl -s -X POST \
     "$WHISPER_API_URL" \
     -H "Content-Type: multipart/form-data" \
     -F "file=@$TEMP_AUDIO_FILE" \
-    -F "model=whisper-1" 2>> "$LOG_FILE")
+    -F "model=whisper-1" \
+    --connect-timeout 5 \
+    --max-time $WHISPER_API_TIMEOUT \
+    -D "$curl_headers" \
+    -o "$curl_output" 2>> "$LOG_FILE" || curl_status=$?
   
-  log_debug "API response received: $response"
+  # Record end time and calculate duration
+  local end_time=$(date +%s)
+  local duration=$((end_time - start_time))
+  log_debug "Curl request completed in $duration seconds with status: $curl_status"
+  
+  if [ $curl_status -ne 0 ]; then
+    log_debug "Curl failed with status: $curl_status"
+    echo "API request failed. Curl error code: $curl_status" >&2
+    
+    # Map curl error codes to human-readable messages
+    case $curl_status in
+      6) echo "Error: Could not resolve host. Check your network connection or API URL." >&2 ;;
+      7) echo "Error: Failed to connect to host. Server may be down or wrong port." >&2 ;;
+      28) 
+        echo "Error: Connection timed out after $WHISPER_API_TIMEOUT seconds. Server may be overloaded or unreachable." >&2
+        log_debug "Timeout after $WHISPER_API_TIMEOUT seconds. Server might be hanging."
+        ;;
+      *) echo "Error: Curl failed with code $curl_status. Check log for details." >&2 ;;
+    esac
+    
+    return 1
+  fi
+  
+  # Get the response from the output file
+  local response=""
+  if [ -f "$curl_output" ]; then
+    if [ ! -s "$curl_output" ]; then
+      log_debug "Curl output file exists but is empty"
+      echo "Error: Received empty response from API" >&2
+      return 1
+    fi
+    response=$(cat "$curl_output")
+    log_debug "API response: $response"
+  else
+    log_debug "Curl output file not created"
+    echo "Error: No response received from API" >&2
+    return 1
+  fi
+  
+  # Check if response is valid JSON
+  if ! echo "$response" | grep -q '^{.*}$'; then
+    log_debug "Response is not valid JSON: $response"
+    echo "Error: Received invalid JSON response from API" >&2
+    return 1
+  fi
   
   # Extract the text from the JSON response
   # This assumes the response is in the format: {"text": "transcription"}
   local transcription=$(echo "$response" | grep -o '"text":"[^"]*"' | cut -d'"' -f4)
   
-  if [ -n "$transcription" ]; then
+  # Handle empty transcription properly
+  if [ -z "$transcription" ] && echo "$response" | grep -q '"text":""'; then
+    log_debug "Empty transcription received from API"
+    echo "Warning: Server returned empty transcription - no speech detected" >&2
+    echo "" > "$TEMP_TRANSCRIPT_FILE"
+    echo "Empty transcription saved to file" >&2
+    return 0  # Return success since this is a valid but empty response
+  elif [ -n "$transcription" ]; then
     # Trim trailing newlines from the transcription
     transcription=$(echo "$transcription" | sed 's/\\n$//g' | tr -d '\n')
     log_debug "Transcription after trimming: $transcription"
     
     # Write only the transcription to the transcript file
     echo "$transcription" > "$TEMP_TRANSCRIPT_FILE"
+    echo "Successfully received transcription" >&2
+    return 0
   else
     log_debug "Failed to extract transcription from response"
+    echo "Error: Could not extract transcription from API response" >&2
+    echo "Raw response: $response" >&2
     return 1
   fi
+  
+  # Clean up curl output file
+  rm -f "$curl_output"
+  rm -f "$curl_headers"
   
   # Only log the transcription, don't echo it with debug info
   log_debug "Final transcription saved to $TEMP_TRANSCRIPT_FILE"

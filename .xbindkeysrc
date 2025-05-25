@@ -1,10 +1,21 @@
 # WhisperHelper Configuration
 # Alt+r records for 5 seconds and automatically transcribes
+# Alt+Shift+r for press-to-hold recording (release to transcribe)
 
 # Alt+r to record for 5 seconds
 "bash /home/nacmonad/Dev/WhisperHelper/record_5_seconds.sh"
     m:0x8 + c:27
     Alt + r
+
+# Alt+Shift+r press event (start recording)
+"bash -c '[ ! -f /tmp/whisper_helper.lock ] && bash /home/nacmonad/Dev/WhisperHelper/record_press_hold.sh'"
+    m:0x9 + c:27
+    Alt+Shift + r
+
+# Alt+Shift+r release event (stop recording and transcribe)
+"bash /home/nacmonad/Dev/WhisperHelper/record_release.sh"
+    m:0x9 + c:27 + release
+    Alt+Shift + r
 
 # You can also add additional hotkeys below if needed
 # For example, to extend recording duration
