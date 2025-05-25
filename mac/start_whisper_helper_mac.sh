@@ -36,8 +36,8 @@ cat > "$HAMMERSPOON_INIT_FILE" << EOL
 local whisperHelperDir = "$SCRIPT_DIR"
 
 -- Key bindings
-local altR = {"alt"}, "r"
-local altShiftR = {"alt", "shift"}, "r"
+local altR = {{"alt"}, "r"}
+local altShiftR = {{"alt", "shift"}, "r"}
 
 -- Alt+r to record for 5 seconds
 hs.hotkey.bind(altR[1], altR[2], function()
